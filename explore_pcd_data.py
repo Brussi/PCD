@@ -14,12 +14,12 @@ def read_files(
     df_latlon = pd.read_pickle(dir_/latlon_file)
     df_7days = pd.read_excel(dir_/pcd_file)
 
-def image(self, df, image_file, date, weight, savefile=None, bounds=None):
+def image(self, df):
     #path = image_file.parent.parent.parent
     fig, ax = plt.subplots(figsize=(15, 15))    
     fig.patch.set_visible(True)    
     fig.suptitle(f'PCDs - Cemaden')   
-    plt.scatter
+    plt.scatter(df.longitude, df.latitude)
     #plot states
     shp = "../../data/shapefiles/br_unidades_da_federacao/BRUFE250GC_SIR.shp"
     states = gpd.read_file(shp)
