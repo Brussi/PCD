@@ -4,15 +4,29 @@ import numpy as np
 from pykrige.ok import OrdinaryKriging
 from pathlib import Path
 import geopandas as gpd
+import os
+from datetime import datetime
+
+def half_life_weight(analyses_date, date):
+    if analyses_date < date:
+        return 1
+    else:
+        delta_hours = (analyses_date - date).total_seconds()/3600
+        return 0.5**(delta_hours/24)
 
 
-
-def read_files(operational=False):
+def read_files(operational=False, half_life=half_life):
     dir_ = Path("/mnt/e/Cemaden_Bolsista/4cemaden/GeoHydroRiskMap/PCD_data")
 
     latlon_file="estacao_lat_lon.pkl"
     df_latlon = pd.read_pickle(dir_/latlon_file)
-    pcd_file = Path("2023_06_28-17_22.pkl")
+    for file in os.listdir(dir_):
+        if "PCD" in file:
+            pcd_file = Path(file)
+            global filename
+            filename = str(pcd_file)[4:20]
+
+            #global pcd_file
 
     if pcd_file.suffix == ".pkl":
         df = pd.read_pickle(dir_/pcd_file)
@@ -24,7 +38,21 @@ def read_files(operational=False):
         if "PCD" in os.listdir(dir_):
             df = pd.read_pickle(pcd_file)
 
-    return df, pcd_file.stem
+    if half_life == True:
+        print("Applying decay")
+        df2 = df.iloc[:,2:]    
+        
+        for date in df2.columns:
+            df2[date] = df2[date] * half_life_weight(datetime.strptime(str(pcd_file),"PCD_%Y_%m_%d-%H:%M.pkl"), date)
+        df.iloc[:,2:]  = df2     
+        #df['prec'] = df2.sum(axis=1)
+        decay == "com"
+    else:
+        decay == "sem"
+
+    df.round(2).to_excel(dir_/f'{filename}_{decay}decaimento.xlsx')
+
+    return df
 
 
 def get_points(lower_resol_factor=1, x_limit = -34.6, mask_data = True):
@@ -119,7 +147,7 @@ def OrdinaryKriging():
 
 
 def inverse_square_distance(limit_radius=200000, filter=True):
-    df, PCD_file = read_files()
+    df = read_files()
     rainfall_values = df.iloc[:,3:].sum(axis=1)  # Example rainfall values at each gauge
     Xf, Yf, mask_border  = get_points()
     #number of neighbou 
@@ -137,15 +165,15 @@ def inverse_square_distance(limit_radius=200000, filter=True):
 
     plot(Xf, Yf, 
          rain_idw,
-         df,
+         df,   
          limit_radius,
          interpol,
          mask_border,
-         nn,
-         PCD_file)
+         nn
+    )
 
 
-def plot(x, y, rain_idw, df, limit_radius, interpol, mask_border, nn, PCD_file):
+def plot(x, y, rain_idw, df, limit_radius, interpol, mask_border, nn):
     import matplotlib.pyplot as plt
     import matplotlib.colors as mcolors
     from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -153,11 +181,16 @@ def plot(x, y, rain_idw, df, limit_radius, interpol, mask_border, nn, PCD_file):
     #map_type = "pcolormesh"
     map_type = "contourf"
     fig, ax = plt.subplots(figsize=(15, 15))    
-    fig.patch.set_visible(True)    
+    fig.patch.set_visible(True)
+    if half_life == True:
+        decay = "com"
+    else:
+        decay = "sem"
+    
     fig.suptitle(f'PCDs - Cemaden- 7 dias acumulados sem decaimento\n'
                  f'Raio limite: {limit_radius}\n'
-                 f'Interpolação: {interpol}'
-                 f'file: {PCD_file}
+                 f'Interpolação: {interpol}\n'
+                 f'file: {filename}'
     )  
 
     # draw filled contours.
@@ -212,11 +245,19 @@ def plot(x, y, rain_idw, df, limit_radius, interpol, mask_border, nn, PCD_file):
 
     ax.axis('off')
     ax.margins(0,0)
-    image_file = f"PCD_data/{interpol}_{nn}_limit_radius.png"
+        
+    image_file = f"PCD_data/{filename}_{interpol}_{decay}decaimento.png"
     fig.savefig(image_file,dpi=1200,bbox_inches='tight',pad_inches=0.6) #pad_inches=-0.2, dpi=200, 
     print(f"Image generated: {image_file}\n")
 
-inverse_square_distance(
-    limit_radius=200000,
-    filter=False
-    )
+
+def main():
+    global half_life
+    half_life = False
+    inverse_square_distance(
+        limit_radius=200000,
+        filter=False
+        )
+    
+if __name__ =="__main__":
+    main()
