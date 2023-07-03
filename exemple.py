@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 
 # Load the dataset
-@st.cache  # Cache the dataset for improved performance
-def load_data():
-    data = pd.read_csv('your_dataset.csv')  # Replace with the path to your dataset
+@st.cache  # Cache the dataset for improved perfor mance
+def load_data(dir_="PCD_data/"):
+    data = pd.read_csv(dir_+'your_dataset.csv')  # Replace with the path to your dataset
     return data
 
 # Main function
